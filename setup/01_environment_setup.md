@@ -7,12 +7,14 @@
 - Storage: 954 GB SSD (~625 GB free)
 - Hypervisor: VMware Workstation Pro (free personal license)
 
-## VM Configuration
+- ## VM Configuration
 - Guest OS: Ubuntu Server 24.04 LTS
-- Allocated RAM: 4 GB
-- Allocated CPUs: 3
-- Disk: 80 GB (dynamically allocated)
+- VM Name: Ubuntu-Splunk-Server
+- Allocated RAM: 8 GB (8192 MB)
+- Allocated CPUs: 4
+- Disk: 100 GB (SCSI)
 - Network: NAT
+- Snapshot: v1-baseline (taken before v2 investigation)
 
 ## Software
 - Splunk Enterprise (free developer license)
