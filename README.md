@@ -1,5 +1,5 @@
 # Splunk-SIEM-Lab-v2: CoinMiner Drive-By Attack on Frothly Brewing
-> Upgraded investigation of the BOTSv3 dataset with full framework mapping, documented SPL queries, and IOC artifacts.
+> Upgraded investigation of the BOTSv3 dataset with framework mapping across MITRE ATT&CK, NIST CSF, NIST 800-53, and CIS Controls v8, documented SPL queries, and IOC artifacts.
 
 **Analyst:** Umu Jalloh
 **Dataset:** Splunk Boss of the SOC v3 (BOTSv3)
@@ -237,7 +237,7 @@ host="BSTOLL-L"
 **Findings:**
 - www.brewertalk.com was visited the most with 137 requests 
 - Second-place was a normal certificate validation site (ocsp.digicert.com) with 42 requests 
-- All the other destinations were also normal corporate or personal browsing
+- All the other destinations were normal corporate or personal browsing
   
 ![Query 08 - BSTOLL-L Browsing Destinations](screenshots/Q08_bstoll_browsing_destinations.png)
  
@@ -330,7 +330,7 @@ earliest="08/20/2018:00:00:00" latest="08/20/2018:23:59:59"
  
 **Findings:**
 - 46 Symantec detections of "Web Attack: JSCoinminer Download 6/8" - all blocked
-- All 46 detections were only on BTUN-L, not BSTOLL-L
+- All 46 detections were on BTUN-L, not BSTOLL-L
 - Affected application: Chrome
 - User: BillyTun
 - This confirmed brewertalk.com as the source of malicious content and JSCoinminer as the malware
@@ -373,7 +373,7 @@ BSTOLL-L
 ```
  
 **Findings:**
-- Zero Symantec detections for BSTOLL-L despite having same exposure to the attack vector
+- Zero Symantec detections for BSTOLL-L despite having similar exposure to the attack vector
 - Either Symantec was not running, signatures were outdated, or it was failing silently
 - This explains why BSTOLL-L was the actual mining victim while BTUN-L was protected
   
@@ -466,6 +466,28 @@ host="BSTOLL-L" instance=*chrome*
 ![Query 18B - End of Mining Session and Final Event at 10:59:19](screenshots/Q18B_chrome_cpu_end.png)
  
 ---
+
+### Query 19 - Chrome CPU Pattern Visualization
+ 
+**Investigative Question:** What does the full Chrome CPU pattern look like across the attack window?
+ 
+**Reasoning:** Q18 captured precise timestamps of high-CPU events (>=99%) but doesn't show the broader pattern including baseline activity. Visualizing the unfiltered data reveals the contrast between normal CPU and mining periods.
+ 
+```spl
+index=botsv3 sourcetype="PerfmonMk:Process"
+earliest="08/20/2018:09:00:00" latest="08/20/2018:11:30:00"
+host="BSTOLL-L" instance=*chrome*
+| table _time, instance, %_Processor_Time
+| sort _time
+```
+ 
+**Findings:**
+- The mining session shows up as a dense block of sustained 100% CPU between baseline activity
+- The brief 10:59:19 spike stands out clearly as an isolated event after mining stopped
+  
+![Query 19 - Chrome CPU Visualization Across Attack Window](screenshots/Q19_chrome_cpu_visualization.png)
+
+ ---
  
 ## Complete Attack Timeline
  
@@ -502,7 +524,7 @@ host="BSTOLL-L" instance=*chrome*
 | **T1189** Drive-by Compromise | Initial Access | Symantec logs identified multiple URLs as the intrusion sources, indicating site-wide compromise (Q12, Q13) |
 | **T1059.007** Command and Scripting Interpreter: JavaScript | Execution | Symantec signature "JSCoinminer Download" confirmed JavaScript-based payload executing in Chrome browser (Q12) |
 | **T1071.001** Application Layer Protocol: Web Protocols | Command and Control | DNS query to known C2 domain coinhive.com (Q11) combined with sustained mining activity (Q18) indicates the JSCoinminer payload established C2-communication with mining pool infrastructure. Direct WebSocket traffic was not captured in the dataset's HTTP logs but is inferable from the activity pattern. |
-| **T1496** Resource Hijacking | Impact | PerfmonMk:Process showed Chrome on BSTOLL-L sustained 100% CPU during attack window (Q07, Q18) |
+| **T1496** Resource Hijacking | Impact | PerfmonMk:Process showed Chrome on BSTOLL-L sustained 100% CPU during attack window (Q07, Q18, Q19) |
  
 ### NIST Cybersecurity Framework
  
