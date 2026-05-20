@@ -1,0 +1,10 @@
+# Query 09 - BSTOLL-L Brewertalk Resources Loaded
+# Phase: 4 - Payload Identification
+# Investigative Question: What specific resources was Chrome loading from brewertalk?
+# Reference: README.md, Phase 4, Query 09
+
+index=botsv3 sourcetype="stream:http"
+earliest="08/20/2018:00:00:00" latest="08/20/2018:23:59:59"
+host="BSTOLL-L" site="www.brewertalk.com"
+| stats count by uri_path, http_method, status
+| sort -count

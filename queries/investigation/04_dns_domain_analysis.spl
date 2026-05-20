@@ -1,0 +1,9 @@
+# Query 04 - DNS Domain Analysis
+# Phase: 2 - Network Activity Analysis
+# Investigative Question: What domains was this network querying during the attack window?
+# Reference: README.md, Phase 2, Query 04
+
+index=botsv3 sourcetype="stream:dns"
+earliest="08/20/2018:05:00:00" latest="08/20/2018:12:00:00"
+| stats count by query
+| sort -count

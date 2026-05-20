@@ -1,0 +1,9 @@
+# Query 02 - Attack Timeline
+# Phase: 1 - Baseline Establishment
+# Investigative Question: Is there a specific time window where activity spiked abnormally?
+# Reference: README.md, Phase 1, Query 02
+
+index=botsv3
+| bucket _time span=1h
+| stats count by _time
+| sort -count

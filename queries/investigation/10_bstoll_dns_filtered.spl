@@ -1,0 +1,19 @@
+# Query 10 - BSTOLL-L's Full DNS Activity (Filtered)
+# Phase: 4 - Payload Identification
+# Investigative Question: What other domains was BSTOLL-L's browser contacting during the CPU spike?
+# Reference: README.md, Phase 4, Query 10
+
+index=botsv3 sourcetype="stream:dns"
+earliest="08/20/2018:00:00:00" latest="08/20/2018:23:59:59"
+host="BSTOLL-L"
+NOT (query="*.microsoft.com" OR query="*.google.com" OR query="*.googleapis.com"
+     OR query="*.googleusercontent.com" OR query="*.gstatic.com" OR query="*.msedge.net"
+     OR query="*.live.com" OR query="*.office.com" OR query="*.office365.com"
+     OR query="*.officeapps.live.com" OR query="*.amazonaws.com" OR query="*.aws.amazon.com"
+     OR query="*.cloudfront.net" OR query="*.azureedge.net" OR query="*.skype.com"
+     OR query="*.bing.com" OR query="*.msn.com" OR query="*.sharepoint.com"
+     OR query="*.sharepointonline.com" OR query="*.facebook.com" OR query="*.facebook.net"
+     OR query="*.doubleclick.net" OR query="*.symantec.com" OR query="*.symantecliveupdate.com"
+     OR query="*.digicert.com" OR query="*.froth.ly" OR query="ipinfo.io")
+| stats count by query
+| sort -count

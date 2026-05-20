@@ -1,0 +1,10 @@
+# Query 05 - Hosts Querying splunk.froth.ly
+# Phase: 2 - Network Activity Analysis
+# Investigative Question: Which machines were responsible for the 5,684 queries?
+# Reference: README.md, Phase 2, Query 05
+
+index=botsv3 sourcetype="stream:dns"
+earliest="08/20/2018:05:00:00" latest="08/20/2018:12:00:00"
+query="splunk.froth.ly"
+| stats count by host
+| sort -count
