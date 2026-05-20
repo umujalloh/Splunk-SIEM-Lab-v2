@@ -1,0 +1,8 @@
+# Query 01 - Data Inventory
+# Phase: 1 - Baseline Establishment
+# Investigative Question: What data sources are available and what is the volume of events?
+# Reference: README.md, Phase 1, Query 01
+
+index=botsv3
+| stats count by sourcetype
+| sort -count

@@ -1,0 +1,11 @@
+# Query 18 - Chrome CPU Timeline on BSTOLL-L (Precise)
+# Phase: 6 - Timeline Reconstruction
+# Investigative Question: When did Chrome's CPU climb to 100% and how long did the mining sustain?
+# Reference: README.md, Phase 6, Query 18
+
+index=botsv3 sourcetype="PerfmonMk:Process"
+earliest="08/20/2018:09:00:00" latest="08/20/2018:11:30:00"
+host="BSTOLL-L" instance=*chrome*
+%_Processor_Time>=99
+| table _time, instance, %_Processor_Time
+| sort _time

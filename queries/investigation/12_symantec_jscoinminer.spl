@@ -1,0 +1,9 @@
+# Query 12 - Symantec JSCoinminer Detections
+# Phase: 5 - Detection Validation
+# Investigative Question: Did Symantec Endpoint Protection detect any malicious activity?
+# Reference: README.md, Phase 5, Query 12
+
+index=botsv3 sourcetype="symantec:ep:security:file"
+earliest="08/20/2018:00:00:00" latest="08/20/2018:23:59:59"
+| table _time, _raw
+| sort _time

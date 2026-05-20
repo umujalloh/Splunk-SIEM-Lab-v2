@@ -1,0 +1,7 @@
+# Detection: CoinHive DNS Lookup
+# Purpose: Detect DNS queries to known CoinHive cryptocurrency mining infrastructure
+# Source: IOCs.md, Detection Recommendations, DNS-Based Detection
+# Related Technique: T1071.001 - Application Layer Protocol: Web Protocols
+
+sourcetype="stream:dns" query IN ("coinhive.com", "*.coinhive.com")
+| stats count by host, query

@@ -1,0 +1,11 @@
+# Query 16 - First Brewertalk Visit on BSTOLL-L
+# Phase: 6 - Timeline Reconstruction
+# Investigative Question: When did BSTOLL-L first visit brewertalk?
+# Reference: README.md, Phase 6, Query 16
+
+index=botsv3 sourcetype="stream:http"
+earliest="08/20/2018:00:00:00" latest="08/20/2018:23:59:59"
+host="BSTOLL-L" site="www.brewertalk.com"
+| table _time, host, site, uri_path
+| sort _time
+| head 5

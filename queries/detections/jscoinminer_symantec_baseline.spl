@@ -1,0 +1,9 @@
+# Detection: JSCoinminer Symantec Detection Baseline
+# Purpose: Surface Symantec Endpoint Protection detections of JSCoinminer attempts as a leading signal for adjacent compromise
+# Source: IOCs.md, Symantec Detection Signatures
+# Related Technique: T1189 - Drive-by Compromise
+
+index=botsv3 sourcetype="symantec:ep:security:file"
+("JSCoinminer" OR SID=30356 OR SID=30358)
+| stats count by host, _time
+| sort _time

@@ -1,0 +1,8 @@
+# Detection: Chrome Sustained High CPU
+# Purpose: Detect browser processes with sustained high CPU usage consistent with cryptocurrency mining
+# Source: IOCs.md, Detection Recommendations, CPU-Based Detection
+# Related Technique: T1496 - Resource Hijacking
+
+sourcetype="PerfmonMk:Process" instance="*chrome*" %_Processor_Time>=90
+| stats count by host, instance
+| where count > 100

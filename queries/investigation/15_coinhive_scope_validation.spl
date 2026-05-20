@@ -1,0 +1,10 @@
+# Query 15 - CoinHive Query Scope Validation
+# Phase: 5 - Detection Validation
+# Investigative Question: Did any other host query coinhive.com?
+# Reference: README.md, Phase 5, Query 15
+
+index=botsv3 sourcetype="stream:dns"
+earliest="08/20/2018:00:00:00" latest="08/20/2018:23:59:59"
+query="coinhive.com"
+| stats count by host
+| sort -count

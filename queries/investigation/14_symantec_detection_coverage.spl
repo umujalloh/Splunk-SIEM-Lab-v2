@@ -1,0 +1,10 @@
+# Query 14 - Symantec Detection Coverage on BSTOLL-L
+# Phase: 5 - Detection Validation
+# Investigative Question: Did Symantec detect anything on BSTOLL-L?
+# Reference: README.md, Phase 5, Query 14
+
+index=botsv3 sourcetype="symantec:ep:security:file"
+earliest="08/20/2018:00:00:00" latest="08/20/2018:23:59:59"
+BSTOLL-L
+| table _time, _raw
+| sort _time

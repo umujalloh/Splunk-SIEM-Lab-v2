@@ -1,0 +1,11 @@
+# Query 07 - BSTOLL-L Process CPU Analysis
+# Phase: 3 - CPU Anomaly Investigation
+# Investigative Question: Which process on BSTOLL-L was consuming the most CPU?
+# Reference: README.md, Phase 3, Query 07
+
+index=botsv3 sourcetype="PerfmonMk:Process"
+earliest="08/20/2018:00:00:00" latest="08/20/2018:23:59:59"
+host="BSTOLL-L"
+| stats max(%_Processor_Time) as max_cpu, avg(%_Processor_Time) as avg_cpu by instance
+| sort -max_cpu
+| head 20

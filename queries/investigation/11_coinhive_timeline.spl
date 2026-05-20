@@ -1,0 +1,10 @@
+# Query 11 - CoinHive Connection Timeline
+# Phase: 4 - Payload Identification
+# Investigative Question: When did BSTOLL-L first query coinhive.com?
+# Reference: README.md, Phase 4, Query 11
+
+index=botsv3 sourcetype="stream:dns"
+earliest="08/20/2018:00:00:00" latest="08/20/2018:23:59:59"
+host="BSTOLL-L" query="coinhive.com"
+| table _time, host, query, src, dest
+| sort _time
