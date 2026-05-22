@@ -543,8 +543,8 @@ host="BSTOLL-L" instance=*chrome*
  
 ## Phase 7 - Framework Mapping
  
- This section maps the investigation findings to industry frameworks for both attacker techniques (MITRE ATT&CK), defensive countermeasures (MITRE D3FEND), and security controls (NIST and CIS).
- 
+This section maps the investigation findings to industry frameworks for both attacker techniques (MITRE ATT&CK), defensive countermeasures (MITRE D3FEND), and security controls (NIST and CIS).
+
 ### MITRE ATT&CK
  
 | Technique | Tactic | Evidence |
@@ -597,6 +597,18 @@ host="BSTOLL-L" instance=*chrome*
 4. **A detection coverage gap on BSTOLL-L** enabled the mining attack to succeed
 ---
  
+## Business Impact
+
+**Direct cost.** Sustained 100% CPU mining on BSTOLL-L for 26 minutes increased electricity consumption beyond baseline and accelerated hardware wear on the affected processor. The direct cost for a single workstation is small but compounds with the number of affected hosts and mining duration.
+
+**Productivity impact.** The user on BSTOLL-L worked on a machine running at 100% CPU for 26 minutes, plus the isolated late event at 10:59:19. Browser performance, application responsiveness, and any work requiring CPU resources would have been degraded during this window.
+
+**Compliance impact.** Cryptomining is unauthorized use of corporate computing resources. If BSTOLL-L touched regulated data, several frameworks could be triggered: PCI DSS Requirement 5.1 (anti-malware controls), HIPAA 164.308(a)(6) (security incident response procedures), and SOX controls if financial data was processed on the host. This investigation did not establish what data classification existed on BSTOLL-L.
+
+**Reputational risk.** Unauthorized cryptomining on corporate infrastructure can trigger breach notification obligations under GDPR, state breach laws, and sector regulations if customer data was on the affected host. For Frothly Brewing, public disclosure carries an additional cost: the attack vector was brewertalk.com, a trusted forum in the brewing community. An incident becoming public could damage Frothly's standing with the same industry network they rely on for customer engagement and supplier relationships.
+
+---
+
 ## Investigative Challenges & Pivots
  
 This section documents the pivots I made during the investigation.
@@ -604,9 +616,7 @@ This section documents the pivots I made during the investigation.
 - **stream:dns source field issue** - `src` field was empty so I used `host` field instead after checking raw events.
 - **PerfmonMk visibility gap** - Process performance data was only collected on BSTOLL-L. Other endpoints could not be assessed for similar CPU anomalies.
 - **Multiple investigative threads** - DNS beaconing and CPU pressure were both followed. The DNS lead (splunk.froth.ly) did not connect to the CoinMiner attack. The CPU lead led directly to the mining activity and BSTOLL-L.
-
-- **PerfmonMk event counting needed deduplication** 
-The initial Q18 analysis reported 131 events in the mining session plus 1 isolated event - PerfmonMk:Process samples every running process every second, so a single high-CPU moment can be counted multiple times when multiple chrome processes are sampled together. Re-running the query with `| dedup _time, instance` showed the mining was actually distributed across two chrome instances: 129 events on chrome#4 (the sustained mining window) and 3 events on chrome#5 (including the earliest event at 09:37:50 and the isolated 10:59:19 event).
+- **PerfmonMk event counting needed deduplication** - The initial Q18 analysis reported 131 events in the mining session plus 1 isolated event PerfmonMk:Process samples every running process every second, so a single high-CPU moment can be counted multiple times when multiple chrome processes are sampled together. Re-running the query with `| dedup _time, instance` showed the mining was actually distributed across two chrome instances: 129 events on chrome#4 (the sustained mining window) and 3 events on chrome#5 (including the earliest event at 09:37:50 and the isolated 10:59:19 event).
 ---
  
 ## Recommendations
