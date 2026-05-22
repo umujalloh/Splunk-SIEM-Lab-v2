@@ -488,6 +488,32 @@ host="BSTOLL-L" instance=*chrome*
 ![Query 19 - Chrome CPU Visualization Across Attack Window](screenshots/Q19_chrome_cpu_visualization.png)
 
  ---
+
+ ### Query 20 - Chrome CPU Event Distribution Analysis
+
+**Investigative Question:** How are the 132 high-CPU events distributed across chrome process instances?
+
+**Reasoning:** Q18 returned a raw event count. PerfmonMk:Process samples every running process every second, so simultaneous samples across multiple chrome instances can be counted as separate events for a single moment of activity. Deduplicating by timestamp and instance shows the true distribution.
+
+```spl
+index=botsv3 sourcetype="PerfmonMk:Process"
+earliest="08/20/2018:09:00:00" latest="08/20/2018:11:30:00"
+host="BSTOLL-L" instance=*chrome*
+%_Processor_Time>=99
+| dedup _time, instance
+| stats min(_time) as first_seen,
+        max(_time) as last_seen,
+        count by instance
+```
+
+**Findings:**
+- The 132 events are distributed across two chrome instances: chrome#4 (129 events) and chrome#5 (3 events)
+- chrome#4 produced the sustained mining session from 09:38:30 to 10:04:11
+- chrome#5 produced the earliest 99%+ event at 09:37:50 and the isolated late event at 10:59:19
+
+![Query 20 - Chrome CPU Distribution by Instance](screenshots/Q20_chrome_cpu_distribution.png)
+
+---
  
 ## Complete Attack Timeline
  
@@ -495,13 +521,13 @@ host="BSTOLL-L" instance=*chrome*
 |---|---|---|---|
 | 09:07:23 | First visit to brewertalk.com | - | Compromise begins on BSTOLL-L |
 | **09:37:40** | - | **First Symantec block of JSCoinminer** | Defense succeeds on protected host |
-| **09:37:50** | **Chrome hits 100% CPU - mining begins** | - | Mining payload begins executing |
+| **09:37:50** | **First Chrome 100% CPU event (chrome#5)** | - | Mining payload begins executing |
 | **09:38:19** | First coinhive.com DNS query | - | Mining script connects to pool |
 | 09:39:20 | Additional coinhive.com queries (4 total) | - | Mining handshake complete |
-| 09:37:50 - 10:04:11 | Sustained 100% CPU mining (~26 minutes, 131 events) | Symantec blocks 46 attempts | Peak attack window |
+| 09:37:50 - 10:04:11 | Sustained 100% CPU mining on chrome#4 (~26 minutes, 129 events) | Symantec blocks 46 attempts | Peak attack window |
 | 10:04:11 | Last 100% CPU event of primary mining session | - | Mining session ends |
 | 10:04 - 10:59 | Chrome CPU drops to baseline | - | Mining inactive |
-| **10:59:19** | **Brief CPU spike to 100%** | - | Single isolated mining event |
+| **10:59:19** | **Final isolated chrome#5 100% CPU event** | - | Last mining event of the day |
  
 ---
  
@@ -511,7 +537,7 @@ host="BSTOLL-L" instance=*chrome*
  
 **Same attack, different outcomes.** Symantec on BTUN-L blocked the JSCoinminer attempt at 09:37:40. 10 seconds later, Chrome on BSTOLL-L hit 100% CPU and began mining. 39 seconds after Symantec's block, BSTOLL-L's browser successfully connected to CoinHive infrastructure. Two machines were attacked by the same vector but had opposite outcomes due to detection coverage gaps.
  
-**Mining duration was 26 minutes.** From 09:37:50 to 10:04:11, Chrome on BSTOLL-L sustained near-continuous 100% CPU usage with 131 logged events.
+ **Mining duration was approximately 26 minutes on chrome#4.** Chrome process instance chrome#4 sustained 99-100% CPU usage from 09:38:30 to 10:04:11, producing 129 distinct sample windows. The second chrome instance (chrome#5) contributed 3 additional 99%+ CPU events, including the earliest mining event at 09:37:50 and a final isolated event at 10:59:19. 
  
 ---
  
@@ -567,6 +593,9 @@ This section documents the pivots I made during the investigation.
 - **stream:dns source field issue** - `src` field was empty so I used `host` field instead after checking raw events.
 - **PerfmonMk visibility gap** - Process performance data was only collected on BSTOLL-L. Other endpoints could not be assessed for similar CPU anomalies.
 - **Multiple investigative threads** - DNS beaconing and CPU pressure were both followed. The DNS lead (splunk.froth.ly) did not connect to the CoinMiner attack. The CPU lead led directly to the mining activity and BSTOLL-L.
+
+- **PerfmonMk event counting needed deduplication** 
+The initial Q18 analysis reported 131 events in the mining session plus 1 isolated event. PerfmonMk:Process samples every running process every second, so a single high-CPU moment can be counted multiple times when multiple chrome processes are sampled together. Re-running the query with `| dedup _time, instance` showed the mining was actually distributed across two chrome instances: 129 events on chrome#4 (the sustained mining window) and 3 events on chrome#5 (including the earliest event at 09:37:50 and the isolated 10:59:19 event).
 ---
  
 ## Recommendations

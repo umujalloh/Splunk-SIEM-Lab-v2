@@ -1,0 +1,13 @@
+# Query 20 - Chrome CPU Event Distribution Analysis
+# Phase: 6 - Timeline Reconstruction
+# Investigative Question: How are the 132 high-CPU events distributed across chrome process instances?
+# Reference: README.md, Phase 6, Query 20
+
+index=botsv3 sourcetype="PerfmonMk:Process"
+earliest="08/20/2018:09:00:00" latest="08/20/2018:11:30:00"
+host="BSTOLL-L" instance=*chrome*
+%_Processor_Time>=99
+| dedup _time, instance
+| stats min(_time) as first_seen,
+        max(_time) as last_seen,
+        count by instance

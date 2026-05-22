@@ -4,7 +4,7 @@ SPL queries from the BOTSv3 CoinMiner investigation, extracted from the main REA
 
 ## Contents
 
-- `investigation/` — the 19 hunt queries from the investigation, numbered in the order they were run. Each one maps to a specific investigative question documented in the main README.
+- `investigation/` — the 20 hunt queries from the investigation, numbered in the order they were run. Each one maps to a specific investigative question documented in the main README.
 - `detections/` — three proposed detection rules built from the findings.
 
 ## File format
