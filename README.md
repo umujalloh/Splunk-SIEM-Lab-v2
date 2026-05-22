@@ -543,6 +543,8 @@ host="BSTOLL-L" instance=*chrome*
  
 ## Phase 7 - Framework Mapping
  
+ This section maps the investigation findings to industry frameworks for both attacker techniques (MITRE ATT&CK), defensive countermeasures (MITRE D3FEND), and security controls (NIST and CIS).
+ 
 ### MITRE ATT&CK
  
 | Technique | Tactic | Evidence |
@@ -552,6 +554,15 @@ host="BSTOLL-L" instance=*chrome*
 | **T1071.001** Application Layer Protocol: Web Protocols | Command and Control | DNS query to known C2 domain coinhive.com (Q11) combined with sustained mining activity (Q18) indicates the JSCoinminer payload established C2-communication with mining pool infrastructure. Direct WebSocket traffic was not captured in the dataset's HTTP logs but is inferable from the activity pattern. |
 | **T1496** Resource Hijacking | Impact | PerfmonMk:Process showed Chrome on BSTOLL-L sustained 100% CPU during attack window (Q07, Q18, Q19) |
  
+### MITRE D3FEND
+
+| ATT&CK Technique | D3FEND Countermeasure |
+|---|---|
+| **T1189** Drive-by Compromise | **D3-WHL** Web Header Logging, **D3-NTA** Network Traffic Analysis |
+| **T1059.007** JavaScript | **D3-PSEP** Process Self-Modification Detection |
+| **T1071.001** Application Layer Protocol: Web | **D3-DNSAL** DNS Allowlisting, **D3-DNSDL** DNS Denylisting |
+| **T1496** Resource Hijacking | **D3-PR** Process Restriction, **D3-RAPA** Resource Access Pattern Analysis |
+
 ### NIST Cybersecurity Framework
  
 | Function | Subcategory | Evidence |
@@ -595,7 +606,7 @@ This section documents the pivots I made during the investigation.
 - **Multiple investigative threads** - DNS beaconing and CPU pressure were both followed. The DNS lead (splunk.froth.ly) did not connect to the CoinMiner attack. The CPU lead led directly to the mining activity and BSTOLL-L.
 
 - **PerfmonMk event counting needed deduplication** 
-The initial Q18 analysis reported 131 events in the mining session plus 1 isolated event. PerfmonMk:Process samples every running process every second, so a single high-CPU moment can be counted multiple times when multiple chrome processes are sampled together. Re-running the query with `| dedup _time, instance` showed the mining was actually distributed across two chrome instances: 129 events on chrome#4 (the sustained mining window) and 3 events on chrome#5 (including the earliest event at 09:37:50 and the isolated 10:59:19 event).
+The initial Q18 analysis reported 131 events in the mining session plus 1 isolated event - PerfmonMk:Process samples every running process every second, so a single high-CPU moment can be counted multiple times when multiple chrome processes are sampled together. Re-running the query with `| dedup _time, instance` showed the mining was actually distributed across two chrome instances: 129 events on chrome#4 (the sustained mining window) and 3 events on chrome#5 (including the earliest event at 09:37:50 and the isolated 10:59:19 event).
 ---
  
 ## Recommendations
@@ -612,6 +623,7 @@ The initial Q18 analysis reported 131 events in the mining session plus 1 isolat
  
 - `README.md` - This investigation narrative with embedded SPL queries and screenshots
 - `IOCs.md` - Indicators of compromise from this investigation
+- `queries/` - Individual SPL files for each investigation query and proposed detection rule
 - `screenshots/` - Visual evidence supporting each query
 - `setup/` - Environment setup documentation
 ---
