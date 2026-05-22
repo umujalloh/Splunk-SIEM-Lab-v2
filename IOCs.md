@@ -82,7 +82,7 @@ The breadth of affected pages indicates a site-wide compromise of brewertalk, no
  
 | Hostname | IP | OS | User | Browser | Outcome |
 |---|---|---|---|---|---|
-| **BTUN-L** | 192.168.3.130 | Windows | BillyTun | Chrome | 46 attempts blocked by Symantec EP |
+| **BTUN-L** | 192.168.3.130 | Windows | BillyTun | Chrome and Edge| 46 attempts blocked by Symantec EP |
  
 ### Hosts in DNS Beaconing Activity
  
@@ -128,30 +128,73 @@ The following 14 hosts showed beaconing behavior to `splunk.froth.ly` during the
 | 10:59:19 | Final isolated mining event |
  
 ---
- 
 ## Detection Recommendations
- 
-Based on this investigation, the following detection rules would have surfaced this attack faster:
- 
-### DNS-Based Detection
- 
+
+The following detection rules would have surfaced this attack faster.
+
+### Rule 1 - CoinHive DNS Lookup
+
 ```spl
 sourcetype="stream:dns" query IN ("coinhive.com", "*.coinhive.com")
 | stats count by host, query
 ```
- 
-### CPU-Based Detection
- 
+
+**What it detects:** DNS queries to known CoinHive cryptocurrency mining infrastructure. Maps to T1071.001 (Application Layer Protocol: Web Protocols).
+
+**False positive risk:** Low. CoinHive shut down in March 2019 and the domain is widely flagged as malicious by threat intel feeds. Modern queries to it are either historical infection, malware reusing old infrastructure, or security tool test traffic.
+
+**Suggested controls:**
+- Allowlist known security tool hosts (EDR, sandbox, threat intel platforms)
+- Tag alerts by host role (workstation vs security infrastructure) for prioritization
+- Expand the rule to include current cryptomining pool patterns (XMRig, Monero pools, web mining services that emerged after CoinHive sunsetted)
+
+---
+
+### Rule 2 - Chrome Sustained High CPU
+
 ```spl
 sourcetype="PerfmonMk:Process" instance="*chrome*" %_Processor_Time>=90
 | stats count by host, instance
 | where count > 100
 ```
- 
+
+**What it detects:** Browser processes with sustained high CPU usage consistent with cryptocurrency mining. Maps to T1496 (Resource Hijacking).
+
+**False positive risk:** High. Sustained 90%+ Chrome CPU is common in legitimate activity such as video calls (Zoom, Teams, Webex), video editing in browser-based tools, Adobe Lightroom exports, Chrome with many active tabs, streaming services, and heavy web applications (Figma, Linear, Notion).
+
+**Suggested controls:**
+- Process allowlist: exempt known high-CPU processes during business hours
+- Multi-signal requirement: require CPU spike AND a corroborating indicator within 10 minutes (DNS query to mining infrastructure, EDR signature, outbound WebSocket to a non-business domain)
+- Baseline comparison: compute the user's normal Chrome CPU pattern over a 14-day window and alert only when current usage exceeds baseline plus N standard deviations
+- Time-of-day weighting: sustained 100% CPU at 3am on a workstation is more suspicious than the same usage at 2pm on a developer's machine
+- Expand the rule to cover Edge and Firefox since drive-by mining attacks target whichever browser the user has open
+
+---
+
+### Rule 3 - JSCoinminer Symantec Baseline
+
+```spl
+index=botsv3 sourcetype="symantec:ep:security:file"
+("JSCoinminer" OR SID=30356 OR SID=30358)
+| stats count by host, _time
+| sort _time
+```
+
+**What it detects:** Symantec Endpoint Protection detections of JSCoinminer attempts. Maps to T1189 (Drive-by Compromise).
+
+**False positive risk:** Low. Symantec JSCoinminer signatures fire on known malicious patterns and are tuned by the vendor.
+
+**Suggested controls:**
+- Tag detections from sandbox or security infrastructure hosts separately
+- Correlate JSCoinminer detections on one host with CPU anomalies on adjacent hosts within the same subnet (the 10-second gap between BTUN-L's first Symantec block and BSTOLL-L's mining onset is the lesson here)
+- When Symantec blocks JSCoinminer on any host, elevate monitoring on hosts that visited the same compromised URL within the past hour
+
+---
+
 ### Multi-Indicator Detection
- 
-Browser process with sustained high CPU + DNS query to known mining infrastructure within 10 minutes = high-confidence cryptomining alert.
- 
+
+Browser process with sustained high CPU + DNS query to known mining infrastructure within 10 minutes = high-confidence cryptomining alert. Combining Rule 1 and Rule 2 reduces false positives compared to either rule alone.
+
 ---
  
 ## MITRE ATT&CK Mapping
