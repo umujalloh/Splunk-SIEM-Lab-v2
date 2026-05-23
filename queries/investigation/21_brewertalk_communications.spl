@@ -1,0 +1,6 @@
+# Query 21 - Brewertalk Communications
+   # Phase: 7 - Root Cause Analysis
+   # Investigative Question: How was brewertalk compromised?
+   # Reference: README.md, Phase 7, Query 21
+   
+   index=botsv3 sourcetype=stream:smtp brewertalk

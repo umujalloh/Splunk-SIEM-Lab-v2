@@ -12,7 +12,7 @@
 
 ## Executive Summary
 
-This is an investigation of a cryptocurrency mining attack against Frothly Brewing Company on August 20, 2018. I analyzed 1,944,092 events across 107 sourcetypes and uncovered a drive-by compromise through a trusted third-party brewing community website `www.brewertalk.com`. A malicious CoinHive JavaScript was injected into the website which silently hijacked employee browser resources to mine Monero cryptocurrency. 
+This is an investigation of a cryptocurrency mining attack against Frothly Brewing Company on August 20, 2018. I analyzed 1,944,092 events across 107 sourcetypes and uncovered a drive-by compromise through a trusted third-party brewing community website `www.brewertalk.com`. A malicious CoinHive JavaScript was injected into the website which silently hijacked employee browser resources to mine Monero cryptocurrency. The compromise originated from a misconfigured AWS S3 bucket that hosted brewertalk's code, which an internal postmortem email from brewertalk's administrator confirmed.
 
 BSTOLL-L was the primary affected endpoint with sustained 100% CPU usage during the mining window. A second endpoint, BTUN-L, was exposed to the same attack vector but was successfully protected by Symantec Endpoint Protection, which blocked 46 JSCoinminer attempts. The contrast between the two hosts revealed a critical detection coverage gap on BSTOLL-L.
 
@@ -50,7 +50,7 @@ The investigation followed seven phases:
 4. **Phase 4 - Payload Identification** - What was the source of the malicious activity?
 5. **Phase 5 - Detection Validation** - Did security tooling detect the attack?
 6. **Phase 6 - Timeline Reconstruction** - When did each event occur and how do they correlate?
-7. **Phase 7 - Framework Mapping** - How does this attack map to industry frameworks?
+7. **Phase 7 - Root Cause Analysis** - How was brewertalk compromised?
 
 ---
 
@@ -515,6 +515,56 @@ host="BSTOLL-L" instance=*chrome*
 
 ---
  
+## Phase 7 - Root Cause Analysis
+
+### Query 21 - Brewertalk Communications
+
+**Investigative Question:** How was brewertalk compromised?
+
+**Reasoning:** Search SMTP logs for brewertalk-related communications. Internal Frothly emails about brewertalk may contain evidence of how the compromise occurred.
+
+**SPL:**
+
+```spl
+index=botsv3 sourcetype=stream:smtp brewertalk
+```
+
+**Findings:**
+
+11 SMTP events returned, forming a complete timeline of the brewertalk incident:
+
+- **9:03 AM:** Bud emails Mallory privately: "I'm making some great changes to brewertalk! Stay tuned."
+- **9:06 AM:** Bud announces brewertalk improvements to allhands, mentions AWS environment
+- **9:09 - 9:16 AM:** Frothly users (Fyodor, Peat) report site errors and registration issues
+- **9:49 AM:** Billy Tun reports brewertalk and his machine running slow
+- **9:50 AM:** Bud responds: "I haven't figured it out yet"
+- **9:56 AM:** Bud identifies the issue: Chrome CPU spiked to 100%, "malicious code got into our forums"
+- **10:24 AM:** Bud sends postmortem to allhands explaining the root cause
+
+The 10:24 AM postmortem email body was base64-encoded. After decoding with CyberChef, Bud confirms the root cause: he accidentally left an AWS S3 bucket publicly writable. Attackers found the open bucket, modified brewertalk's JavaScript code to inject CoinHive, and every visitor to brewertalk.com downloaded the miner.
+
+From the decoded email:
+
+> Well, I messed up!
+>
+> I had a "open public bucket" accidentally. It looks like some malicious people got into our code and added in something called a "coinminer" which made it so that anyone browsing to our site would generate some cryptocurrency. That's why some browsers were hitting 100% CPU!
+>
+> I closed down the bucket and cleaned up the code, and will bring brewertalk back on line soon.
+>
+> Sorry Grace!
+>
+> -buuuuuuddddddd ☹
+
+Root cause: misconfigured AWS S3 bucket with public write access.
+
+![Query 21 - Brewertalk SMTP Search Results](screenshots/Q21A_brewertalk_postmortem_search.png)
+
+![Postmortem Email in Splunk](screenshots/Q21B_brewertalk_postmortem_search.png)
+
+![Decoded Postmortem Body](screenshots/Q21C_brewertalk_postmortem_decoded.png)
+
+---
+
 ## Complete Attack Timeline
  
 | Time | BSTOLL-L (Chrome) | BTUN-L (Chrome and Edge) | Significance |
@@ -541,9 +591,19 @@ host="BSTOLL-L" instance=*chrome*
  
 ---
  
-## Phase 7 - Framework Mapping
+## Key Findings
  
-This section maps the investigation findings to industry frameworks for both attacker techniques (MITRE ATT&CK), defensive countermeasures (MITRE D3FEND), and security controls (NIST and CIS).
+1. **Brewertalk.com served malicious JSCoinminer JavaScript** - confirmed by Symantec naming the URL as the intrusion source
+2. **BSTOLL-L was the actual mining victim** - sustained 100% CPU for 26 minutes, coinhive.com DNS confirmed, no Symantec protection
+3. **BTUN-L was successfully protected** - Symantec blocked 46 attempts at the same attack vector
+4. **A detection coverage gap on BSTOLL-L** enabled the mining attack to succeed
+5. **Root cause was a misconfigured AWS S3 bucket** - brewertalk's code was hosted in a publicly writable S3 bucket which allowed attackers to inject CoinHive into the JavaScript.
+
+---
+
+## Framework Mapping
+ 
+This section maps the investigation findings to industry frameworks covering attacker techniques (MITRE ATT&CK), defensive countermeasures (MITRE D3FEND), and security controls (NIST and CIS).
 
 ### MITRE ATT&CK
  
@@ -589,14 +649,6 @@ This section maps the investigation findings to industry frameworks for both att
  
 ---
  
-## Key Findings
- 
-1. **Brewertalk.com served malicious JSCoinminer JavaScript** - confirmed by Symantec naming the URL as the intrusion source
-2. **BSTOLL-L was the actual mining victim** - sustained 100% CPU for 26 minutes, coinhive.com DNS confirmed, no Symantec protection
-3. **BTUN-L was successfully protected** - Symantec blocked 46 attempts at the same attack vector
-4. **A detection coverage gap on BSTOLL-L** enabled the mining attack to succeed
----
- 
 ## Business Impact
 
 **Direct cost.** Sustained 100% CPU mining on BSTOLL-L for 26 minutes increased electricity consumption beyond baseline and accelerated hardware wear on the affected processor. The direct cost for a single workstation is small but compounds with the number of affected hosts and mining duration.
@@ -611,12 +663,12 @@ This section maps the investigation findings to industry frameworks for both att
 
 ## Investigative Challenges & Pivots
  
-This section documents the pivots I made during the investigation.
- 
 - **stream:dns source field issue** - `src` field was empty so I used `host` field instead after checking raw events.
 - **PerfmonMk visibility gap** - Process performance data was only collected on BSTOLL-L. Other endpoints could not be assessed for similar CPU anomalies.
 - **Multiple investigative threads** - DNS beaconing and CPU pressure were both followed. The DNS lead (splunk.froth.ly) did not connect to the CoinMiner attack. The CPU lead led directly to the mining activity and BSTOLL-L.
-- **PerfmonMk event counting needed deduplication** - The initial Q18 analysis reported 131 events in the mining session plus 1 isolated event PerfmonMk:Process samples every running process every second, so a single high-CPU moment can be counted multiple times when multiple chrome processes are sampled together. Re-running the query with `| dedup _time, instance` showed the mining was actually distributed across two chrome instances: 129 events on chrome#4 (the sustained mining window) and 3 events on chrome#5 (including the earliest event at 09:37:50 and the isolated 10:59:19 event).
+- **PerfmonMk event counting needed deduplication** - The initial Q18 analysis reported 131 events in the mining session plus 1 isolated event. PerfmonMk:Process samples every running process every second, so a single high-CPU moment can be counted multiple times when multiple chrome processes are sampled together. Re-running the query with `| dedup _time, instance` showed the mining was actually distributed across two chrome instances: 129 events on chrome#4 (the sustained mining window) and 3 events on chrome#5 (including the earliest event at 09:37:50 and the isolated 10:59:19 event).
+- **Email body required external decoding** - The postmortem email body in stream:smtp was base64-encoded across multiple MIME parts. Had to extract the base64 string from Splunk's content field and decode it with CyberChef (From Base64).
+
 ---
  
 ## Recommendations
@@ -625,8 +677,10 @@ This section documents the pivots I made during the investigation.
 2. **Deploy uniform endpoint performance monitoring** - PerfmonMk should collect from all Windows endpoints, not just BSTOLL-L
 3. **Block known cryptocurrency mining domains** - Implement DNS-layer blocking for coinhive.com and similar mining infrastructure
 4. **User awareness training** - Educate employees on drive-by compromise risks, even on trusted industry websites
-5. **Web filtering** - Consider URL filtering for content categories that present elevated risk
+5. **Web filtering** - Implement URL filtering to block known high-risk site categories
 6. **Incident response runbook** - Create documented procedure for cryptomining detection and response
+7. **Third-party risk assessment** - The attack vector was a trusted industry website employees regularly accessed. Review security posture of external sites used for work
+
 ---
  
 ## Repository Contents
@@ -636,6 +690,7 @@ This section documents the pivots I made during the investigation.
 - `queries/` - Individual SPL files for each investigation query and proposed detection rule
 - `screenshots/` - Visual evidence supporting each query
 - `setup/` - Environment setup documentation
+
 ---
  
 *Investigation conducted by Umu Jalloh*
