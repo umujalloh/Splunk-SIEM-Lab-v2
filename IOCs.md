@@ -129,7 +129,7 @@ The following 14 hosts showed beaconing behavior to `splunk.froth.ly` during the
 
 ---
 
-## Threat Intelligence - Current State (2026)
+## Threat Intelligence - Current State
 
 This investigation analyzes a 2018 attack. CoinHive and JSCoinminer are no longer current threats. This section documents what changed and what still applies to SOC work today.
 
