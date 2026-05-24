@@ -126,8 +126,41 @@ The following 14 hosts showed beaconing behavior to `splunk.froth.ly` during the
 | 09:38:19 | First C2 DNS resolution on affected host |
 | 09:37:50 - 10:04:11 | Sustained mining session (~26 minutes) |
 | 10:59:19 | Final isolated mining event |
- 
+
 ---
+
+## Threat Intelligence - Current State (2026)
+
+This investigation analyzes a 2018 attack. CoinHive and JSCoinminer are no longer current threats. This section documents what changed and what still applies to SOC work today.
+
+### CoinHive Status
+
+CoinHive shut down March 8, 2019 after Monero's hash rate dropped 50% post-hard fork and XMR value dropped 85%. The coinhive.com domain is no longer operational for mining ([Krebs on Security](https://krebsonsecurity.com/2019/02/crytpo-mining-service-coinhive-to-call-it-quits/)). 
+
+DNS queries to coinhive.com today indicate dormant infections or legacy detection rules, not active threats. Detection rules built solely around coinhive.com will miss current cryptomining activity.
+
+### Current Cryptomining Threat Landscape
+
+Cryptomining attacks shifted to other delivery methods after the shutdown of CoinHive.
+
+XMRig has become the dominant cryptominer. It is open-source Monero mining software that can be used legitimately with consent, but is often deployed by attackers on compromised hosts via exploits, fake software updates, and bundled installers. CISA published a Malware Analysis Report (MAR-10387061-1.v1) on XMRig in 2022 after Iranian government-sponsored APT actors used it against a Federal Civilian Executive Branch network to harvest credentials ([CISA Advisory AA22-320A](https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-320a)).
+
+Cloud infrastructure is a current target. Attackers target cloud environments because compute resources scale and detection is harder than on endpoints. Microsoft Threat Intelligence documented attacks exploiting OpenMetadata vulnerabilities (CVE-2024-28255, CVE-2024-28847, CVE-2024-28253, CVE-2024-28848, CVE-2024-28254) to compromise Kubernetes workloads for cryptomining in April 2024 ([Microsoft Security Blog](https://www.microsoft.com/en-us/security/blog/2024/04/17/attackers-exploiting-new-critical-openmetadata-vulnerabilities-on-kubernetes-clusters/)). 
+
+Initial access often comes from known vulnerabilities. According to the CISA advisory, attackers exploited Log4Shell (CVE-2021-44228) in an unpatched VMware Horizon server as the entry point before deploying XMRig.
+
+### Why This Investigation Still Applies
+
+The specific IOCs are outdated but the TTPs are not:
+
+- Drive-by compromise via trusted third-party websites is still a top initial access vector
+- JavaScript-based payloads still execute in browsers
+- Resource hijacking is still the impact regardless of miner family
+- Detection coverage gaps like BSTOLL-L's (no working endpoint protection) remain common
+- CPU monitoring still works as a detection signal for XMRig and other CPU-based miners
+
+---
+ 
 ## Detection Recommendations
 
 The following detection rules would have surfaced this attack faster.
@@ -141,7 +174,7 @@ sourcetype="stream:dns" query IN ("coinhive.com", "*.coinhive.com")
 
 **What it detects:** DNS queries to known CoinHive cryptocurrency mining infrastructure. Maps to T1071.001 (Application Layer Protocol: Web Protocols).
 
-**False positive risk:** Low. CoinHive shut down in March 2019 and the domain is widely flagged as malicious by threat intel feeds. Modern queries to it are either historical infection, malware reusing old infrastructure, or security tool test traffic.
+**False positive risk:** Low. CoinHive shut down in March 2019 and the domain is widely flagged as malicious by threat intel feeds. 
 
 **Suggested controls:**
 - Allowlist known security tool hosts (EDR, sandbox, threat intel platforms)
